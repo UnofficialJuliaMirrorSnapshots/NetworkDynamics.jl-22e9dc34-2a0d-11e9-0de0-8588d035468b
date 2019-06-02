@@ -3,6 +3,8 @@ module nd_ODE_Static_mod
 include("NetworkStructures.jl")
 using .NetworkStructures
 
+using ..NDFunctions
+
 using Parameters
 using LightGraphs
 using LinearAlgebra
@@ -21,11 +23,11 @@ the edge has as source and destination respectively.
 This works for multi-dimensional variables as well. =#
 
 
-@with_kw struct nd_ODE_Static
-    vertices!
-    edges!
-    graph
-    graph_stucture
+@with_kw struct nd_ODE_Static{G, GS}
+    vertices!::Array{ODEVertex, 1}
+    edges!::Array{StaticEdge, 1}
+    graph::G
+    graph_stucture::GS
 end
 
 function (d::nd_ODE_Static)(dx, x, p, t)
@@ -37,7 +39,7 @@ function (d::nd_ODE_Static)(dx, x, p, t)
     for i in 1:gs.num_v
         d.vertices![i].f!(dx[gs.v_idx[i]], x[gs.v_idx[i]], gs.e_s[i], gs.e_d[i], p, t)
     end
-    end
+    end # views
     nothing
 end
 
@@ -50,7 +52,7 @@ function (d::nd_ODE_Static)(dx, x, p::T, t) where T <: AbstractArray
     for i in 1:gs.num_v
         d.vertices![i].f!(dx[gs.v_idx[i]], x[gs.v_idx[i]], gs.e_s[i], gs.e_d[i], p[i], t)
     end
-    end
+    end # views
     nothing
 end
 

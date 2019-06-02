@@ -12,23 +12,59 @@ the edges, as well as all the views into them, and the complete set of indices.
 
 export create_idxs, create_graph_structure, GraphStructure, construct_mass_matrix
 
-struct GraphStructure
-    num_v # Number of vertices
-    num_e # Number of edges
-    e_int # Variables living on edges
-    e_idx # Array of Array of indices of variables in e_int belonging to edges
-    e_x_idx # Array of Array of indices of variables in x belonging to edges if edges are dynamic
-    s_idx # Array of Array of indices of variables in x belonging to source vertex of edge
-    d_idx # Array of Array of indices of variables in x belonging to destination vertex of edge
-    v_idx # Array of Array of indices of variables in x belonging to vertex
-    e_s # Array of Array of views on the variables in e_int of the edges that are source of a vertex
-    e_d
+import Base.getindex
+
+
+struct GS_e_int_View{G}
+    gs::G
+    idx_offset::Int
 end
 
-function create_idxs(dims, counter=1)
-    idxs = [zeros(Int32, dim) for dim in dims]
+function getindex(gev::GS_e_int_View, idx::Int)
+    gev.gs.e_int[idx + gs_x_view.idx_offset]
+end
+
+
+struct GS_x_View{G}
+    gs::G
+    idx_offset::Int
+end
+
+function getindex(gxv::GS_x_View, idx::Int)
+    gxv.gs.x[idx + gs_x_view.idx_offset]
+end
+
+#
+# mutable struct GS{T}
+#     x::T
+#     gs_x_view::GS_x_View{GS{T}}
+#     function GS(arr::T) where T
+#         gs = new{T}(arr)
+#         gs.gs_x_view = GS_x_View{GS{T}}(gs, 1)
+#         gs
+#     end
+# end
+
+const Idx = UnitRange{Int}
+
+struct GraphStructure{T_e_int}
+    num_v::Int # Number of vertices
+    num_e::Int # Number of edges
+    e_int::T_e_int # Variables living on edges
+    e_idx::Array{Idx, 1} # Array of indices of variables in e_int belonging to edges
+    e_x_idx::Array{Idx, 1} # Array of indices of variables in x belonging to edges if edges are dynamic
+    s_idx::Array{Idx, 1} # Array of indices of variables in x belonging to source vertex of edge
+    d_idx::Array{Idx, 1} # Array of indices of variables in x belonging to destination vertex of edge
+    v_idx::Array{Idx, 1} # Array of indices of variables in x belonging to vertex
+    # Array of Array of views on the variables in e_int of the edges that are source of a vertex
+    e_s::Array{Array{SubArray{Float64,1,Array{Float64,1},Tuple{Idx},true},1},1}
+    e_d::Array{Array{SubArray{Float64,1,Array{Float64,1},Tuple{Idx},true},1},1}
+end
+
+function create_idxs(dims, counter=1)::Array{Idx, 1}
+    idxs = [1:1 for dim in dims]
     for (i, dim) in enumerate(dims)
-        idxs[i] .= collect(counter:(counter + dim - 1))
+        idxs[i] = counter:(counter + dim - 1)
         counter += dim
     end
     idxs
